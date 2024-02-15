@@ -1,7 +1,7 @@
 const { exec } = require('child_process')
 
 const SYMBLE = '@'
-const LENGTH = 20
+const LENGTH = 5
 
 let SIZE = 0
 
