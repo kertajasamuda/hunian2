@@ -2,10 +2,10 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 const puppeteer = require('puppeteer-extra')
 const axios = require('axios')
 
-const SYMBLE = '$'
+const SYMBLE = '@'
 const NAME = 'ARSIP'
 
-let RELOAD = false
+const RELOAD = false
 
 let mLoginFailed = false
 let browser = null
@@ -33,10 +33,6 @@ process.argv.slice(2).forEach(function (data, index) {
             mData = parseInt(data)
             SERVER = 'gmail_'+data
             readCookies()
-        } else if(index == 1) {
-            if (data == '1' || data == 1) {
-                RELOAD = true
-            }
         }
     } catch (error) {}
 })
@@ -81,7 +77,6 @@ async function startBrowser(data) {
                 '--disable-setuid-sandbox',
                 '--ignore-certificate-errors',
                 '--ignore-certificate-errors-skip-list',
-                `--proxy-server=socks5://209.38.204.166:30002`,
                 '--disable-dev-shm-usage'
             ]
         })
@@ -89,7 +84,7 @@ async function startBrowser(data) {
         let page = (await browser.pages())[0]
     
         console.log(SYMBLE+SYMBLE+'---START---'+getID(mData))
-        await updateServer(null)
+        await updateServer()
 
         let details = await getPageDetails(page)
         await setUserAgent(page, details)
@@ -111,7 +106,7 @@ async function startBrowser(data) {
         await page.goto('https://colab.research.google.com/drive/'+COLAB[0], { waitUntil: 'load', timeout: 0 })
         await waitForSelector(page, 'colab-connect-button')
         await setUserId(page)
-        await updateServer(null)
+        await updateServer()
         let ID = ((mData-1)*3)+1
         console.log(SYMBLE+SYMBLE+'---PAGE----'+getID(ID))
         
@@ -165,11 +160,7 @@ async function startBrowser(data) {
                     })
         
                     if (input) {
-                        if (RELOAD) {
-                            await PAGES[i].keyboard.type(ID+' 1')
-                        } else {
-                            await PAGES[i].keyboard.type(ID+' 0')
-                        }
+                        await PAGES[i].keyboard.type(parseInt(ID).toString())
                         await delay(200)
                         await PAGES[i].keyboard.press('Enter')
                     } else {
@@ -201,7 +192,7 @@ async function startBrowser(data) {
                 process.exit(0)
             }
 
-            await updateServer(page)
+            await updateServer()
         }
     } catch (error) {
         console.log(error)
@@ -233,8 +224,8 @@ async function logInGmail(page, data) {
                 await page.click('div[data-challengetype="12"]')
                 status = await waitForLoginSuccess(page, true)
                 if (status == 5) {
-                    let recovery = data['recovery'].trim()
-                    if (!recovery.includes('.com')) {
+                    let recovery = data['recovery']
+                    if (!recovery.endsWith('.com')) {
                         recovery += '@gmail.com'
                     }
                     await page.type('#knowledge-preregistered-email-response', recovery)
@@ -291,7 +282,6 @@ async function colabCheckConnected(page, login) {
 }
 
 async function setUserId(page) {
-    await delay(1000)
     await page.keyboard.down('Control')
     await page.keyboard.press('Enter')
     await page.keyboard.up('Control')
@@ -580,7 +570,7 @@ async function getStatusLog(page) {
     return 'NULL'
 }
 
-async function updateServer(page) {
+async function updateServer() {
     let now = new Date().getTime()
 
     if (now > mUpdate) {
@@ -590,10 +580,6 @@ async function updateServer(page) {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
         })
-
-        if (page) {
-            await saveCookies(page)
-        }
     }
 }
 
@@ -605,18 +591,81 @@ async function removeCaptha(page) {
             if (cancel) {
                 cancel.click()
             }
-        }
+        } 
     })
 }
 
 async function saveCookies(page) {
-    let cookies = await page.cookies()
+    let cookie = await page.cookies()
+
+    let cookies = []
+
+    for (let i = 0; i < cookie.length; i++) {
+        let name = cookie[i]['name']
+        if (name == 'SAPISID' || name == 'APISID' || name == 'SSID' || name == 'SID' || name == 'HSID') {
+            cookies.push(cookie[i])
+        }
+    }
 
     await putAxios(BASE_URL+NAME+'/'+SERVER+'/cookies.json', JSON.stringify(cookies), {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         }
     })
+}
+
+async function checkConnected() {
+    let timeout = 0
+    let connected = false
+
+    while (true) {
+        await delay(1000)
+        let block = await page.evaluate(() => {
+            let root = document.querySelector('[class="blocked-dialog confirm-dialog"]')
+            if (root) {
+                return true
+            }
+            return false
+        })
+
+        if (block) {
+            break
+        } else {
+            const value = await page.evaluate(() => {
+                let colab = document.querySelector('colab-connect-button')
+                if(colab) {
+                    let display = colab.shadowRoot.querySelector('#connect-button-resource-display')
+                    if (display) {
+                        let ram = display.querySelector('.ram')
+                        if (ram) {
+                            return ram.shadowRoot.querySelector('.label').innerText
+                        }
+                    } else {
+                        let connect = colab.shadowRoot.querySelector('#connect')
+                        if (connect) {
+                            return connect.innerText
+                        }
+                    }
+                }
+                return null
+            })
+    
+            if (value) {
+                timeout++
+    
+                if (value != 'Connect') {
+                    connected = true
+                    break
+                }
+            }
+    
+            if (timeout >= 8) {
+                break
+            }
+        }
+    }
+    
+    return connected
 }
 
 async function connectedList(page) {
