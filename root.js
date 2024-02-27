@@ -77,7 +77,7 @@ async function startBrowser(data) {
                 '--disable-setuid-sandbox',
                 '--ignore-certificate-errors',
                 '--ignore-certificate-errors-skip-list',
-                `--proxy-server=socks5://6giza7xiemfmfu:dm028q855p8eqxsyvvzdj7jl4qwj@us-east-static-03.quotaguard.com:1080`,
+                `--proxy-server=ALAMAT`,
                 '--disable-dev-shm-usage'
             ]
         })
