@@ -77,7 +77,6 @@ async function startBrowser(data) {
                 '--disable-setuid-sandbox',
                 '--ignore-certificate-errors',
                 '--ignore-certificate-errors-skip-list',
-                `--proxy-server=socks5://127.0.0.1:1080`,
                 '--disable-dev-shm-usage'
             ]
         })
