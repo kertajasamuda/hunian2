@@ -1,8 +1,0 @@
-sudo rm /var/lib/dpkg/statoverride
-sudo rm /var/lib/dpkg/lock
-sudo dpkg --configure -a
-sudo apt-get -f install
-echo "deb http://cz.archive.ubuntu.com/ubuntu jammy main" >> sudo /etc/apt/sources.list
-apt update
-apt install libc6 -y
-apt install -y g++-11
